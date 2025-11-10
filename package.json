@@ -1,0 +1,13 @@
+{
+  "name": "vrack2-net",
+  "version": "1.0.0",
+  "description": "Устройства VRack2 для работы с TCP сервисами",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Boris Bobylev",
+  "devDependencies": {
+    "@types/node": "^24.9.1"
+  }
+}
