@@ -98,14 +98,15 @@ class ConverterClient extends Device {
       case 'error':
         // Обработка ошибок
         this.error(value.toString(), value)
+        break;
       case 'render':
         this.render()
+        break;
       default: 
         // Обрабатываем READ WRITE и тп
         if (this.options.debug) this.terminal(event, value)
     }
   }
-
 
   /**
    * Обработчик метрик

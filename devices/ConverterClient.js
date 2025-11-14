@@ -105,8 +105,10 @@ class ConverterClient extends vrack2_core_1.Device {
             case 'error':
                 // Обработка ошибок
                 this.error(value.toString(), value);
+                break;
             case 'render':
                 this.render();
+                break;
             default:
                 // Обрабатываем READ WRITE и тп
                 if (this.options.debug)

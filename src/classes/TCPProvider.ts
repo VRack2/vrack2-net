@@ -244,7 +244,7 @@ class TCPProvider {
 
       if (this.socket) {
         this.socket.write(buffer);
-        this.metricCallback('WRITE', util.inspect(buffer, { maxArrayLength: null }));
+        this.eventCallback('WRITE', util.inspect(buffer, { maxArrayLength: null }));
         this.state.byteSend += buffer.length;
         this.socket.once('data', this.handleData.bind(this));
       } else {
@@ -357,7 +357,7 @@ class TCPProvider {
    */
   private handleData(data: Buffer): void {
     this.state.byteReceive += data.length;
-    this.metricCallback('READ', util.inspect(data, { maxArrayLength: null }));
+    this.eventCallback('READ', util.inspect(data, { maxArrayLength: null }));
     this.buffer = Buffer.concat([this.buffer, data]);
 
     if (this.packageCheckCallback(this.buffer)) {
