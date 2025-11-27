@@ -1,12 +1,59 @@
 import * as net from 'net';
 import * as util from 'util';
+import { ErrorManager, Rule } from 'vrack2-core';
+
+const cs = 'TCPProvider'
+
+ErrorManager.register(cs,
+  'A7UA92OTTHY0',
+  'V2NET_ALL_REQ_FAILED',
+  'All request in autoRequest failed',
+  {
+    retry: Rule.number().description('Retry count'),
+    message: Rule.string().description('Text of error')
+  }
+);
+
+ErrorManager.register(cs, 'YGR3NSASNZY1', 'V2NET_PROVIDER_BUSY',
+  'Provider is busy. At the moment he is executing another request',
+);
+
+ErrorManager.register(cs, '7NI05LC9PEW3', 'V2NET_PROVIDER_NOT_CONN',
+  'Provider not connected',
+);
+
+ErrorManager.register(cs, 'PN93XV1YPP3F', 'V2NET_PROVIDER_REQ_TIMEOUT',
+  'Request timeout',
+);
+
+ErrorManager.register(cs, 'XQJS3K3BXVLN', 'V2NET_PROVIDER_SOCKET_ERROR',
+  'An error occurred while trying to write data to the socket.',
+);
+
+ErrorManager.register(cs, 'LOR585AUX6JX', 'V2NET_PROVIDER_DESTROYED',
+  'Provider destroyed. Manually calling the provider destroy',
+);
+
+ErrorManager.register(cs, 'GLN6TURIQ8XJ', 'V2NET_PROVIDER_SOCKET_TIMEOUT',
+  'Socket connection timeout',
+);
+
+ErrorManager.register(cs, '5HTHXLHWBSRJ', 'V2NET_PROVIDER_CANT_REQUEST',
+  'The provider cannot fulfill the request - it is either closed or already busy with another request',
+);
+
+ErrorManager.register(cs, 'XKJL8EI6XR3S', 'V2NET_PROVIDER_REQUIRE_BUS',
+  'The provider requires a bus',
+);
 
 /**
  * TCPProvider — класс для управления устойчивым TCP-соединением с поддержкой автоматического
  * переподключения, таймаутов, метрик и буферизации входящих данных.
  * 
- * Предназначен для сценариев, где требуется надёжный обмен бинарными пакетами по TCP
+ * Предназначен для сценариев, где требуется надёжный обмен бинарными пакетами по TCP 
  * (например, промышленные протоколы, Modbus TCP и т.п.).
+ * 
+ * Используется устройством
  */
 class TCPProvider {
   /**
@@ -69,7 +116,7 @@ class TCPProvider {
    * 
    * @see addUrgentQueue
   */
-  private urgentQueue: Array<string> = []
+  private urgentQueue = new Set<string>()
 
   /**
    * Объект состояния провайдера. Содержит флаги и счётчики для отслеживания
@@ -86,7 +133,7 @@ class TCPProvider {
     byteReceive: 0,      // Общее количество полученных байт
     device: '',          // Активное устройство которое сейчас заняло провайдер
     deviceType: '',      // Тип активного устройства
-    urgentQueue: this.urgentQueue
+    queue: Array<string>()            // Активная текущая срочная очередь
   };
 
   /**
@@ -122,27 +169,43 @@ class TCPProvider {
   }
 
   /**
+   * Возвращает либо строку либо текущее устройство в срочной очереди
+   * @returns {string | undefined}
+  */
+  public getNowInQueue(){
+    return this.urgentQueue.values().next().value 
+  }
+
+  /**
    * Добавление в срочную очередь устройства
   */
-  addUrgentQueue(device: string) {
-    this.urgentQueue.push(device)
+  public addUrgentQueue(device: string) {
+    this.urgentQueue.add(device)
+    this.state.queue = [...this.urgentQueue]
+  }
+
+  /**
+   * Добавление в срочную очередь устройства
+  */
+  public clearUrgentQueue() {
+    this.urgentQueue.clear()
+    this.state.queue = []
   }
 
   /**
    * Устанавливает текущее активное устройство 
    * (устройство которое занимает TCPProvider)
   */
-  setDevice(type: string, device: string) {
+  public setDevice(type: string, device: string) {
     this.clearDevice() // Убираем все старое, если оно было
     this.state.device = device
     this.state.deviceType = type
-    this.eventCallback('render', undefined)
   }
 
   /**
    * Очищаем информацию о активном устройстве
   */
-  clearDevice(){
+  public clearDevice() {
     if (this.state.device === '') return
 
     /**
@@ -150,28 +213,28 @@ class TCPProvider {
      * По сути устройство воспользовалось своей возможностью и само вызвало
      * clearDevice() или передало управление дальше. 
     */
-    if (this.urgentQueue.indexOf(this.state.device) === 0) this.urgentQueue.splice(0,1) // удаляем нулевой индекс 
-
+    if (this.urgentQueue.has(this.state.device)) this.urgentQueue.delete(this.state.device)
+    this.state.queue = [...this.urgentQueue]
     this.state.device = ''
     this.state.deviceType = ''
-
-    this.eventCallback('render', undefined)
   }
 
   /**
    * Проверяет флаги и соответсвие срочной очереди. 
-   * Возвращает true если все условия для запроса учтены и их можно делать
    * 
-   * Если же возвращает false - **устройство должно немедленно передать управления дальше**
+   * Если что то не так - выдаст исключение которое нужно прокинуть выше для устройств типа
+   * ConverterBus.
    * 
-   * Так же проверяет срочную очередь - если есть несоответсвие текущего устройства и устройства
-   * в очереди - возвращает false.
+   * Рекомендуется вызывать каждый раз при многочисленных запросах одного устройства или
+   * в самом начале устройства, если оно не тратит на запросы в среднем больше 300мс
+   * 
+   * Для примера можно заглянуть в [vrack2-modbus](https://github.com/VRack2/vrack2-modbus)
   */
-  canRequest(){
+  public canRequest() {
     // Если занят и не подключен
-    if (!this.state.connected || this.state.progress) return false
-    // Если в очереди есть устройство, но это не текущее = тоже false
-    if (this.urgentQueue.length && this.urgentQueue[0] !== this.state.device) return false
+    if (!this.state.connected || this.state.progress) throw ErrorManager.make('V2NET_PROVIDER_CANT_REQUEST')
+    // Если в очереди есть устройство, но это не текущее
+    if (this.urgentQueue.size && !this.urgentQueue.has(this.state.device)) throw ErrorManager.make('V2NET_PROVIDER_REQUIRE_BUS')
     return true
   }
 
@@ -186,11 +249,14 @@ class TCPProvider {
   /**
    * Выполняет запрос с автоматическими повторами в случае таймаута.
    * 
+   * Использует `request()`
+   * 
+   * @see request()
    * @param buffer — данные для отправки
    * @param timeout — таймаут одного запроса (в миллисекундах)
    * @param maxRetries — максимальное количество попыток (по умолчанию 3)
-   * @returns Promise<boolean> — разрешается при успешном получении полного пакета
-   * @throws Error — если все попытки завершились неудачей
+   * @returns Promise<boolean> — Если завершается без исключений - значит выполняется успешно
+   * @throws V2NET_ALL_REQ_FAILED — если все попытки завершились неудачей
    */
   public async autoRequest(buffer: Buffer, timeout: number, maxRetries = 3): Promise<boolean> {
     const startTime = Date.now();
@@ -205,7 +271,10 @@ class TCPProvider {
         this.metricCallback('timeout', duration);
 
         if (attempt === maxRetries) {
-          throw new Error(`All requests (${maxRetries}) failed: ${error.message}`);
+          throw ErrorManager.make('V2NET_ALL_REQ_FAILED', {
+            retry: maxRetries,
+            message: error.message
+          }).add(error)
         }
       }
     }
@@ -215,16 +284,38 @@ class TCPProvider {
   /**
    * Выполняет одиночный запрос: отправляет данные и ожидает полный ответ.
    * 
+   * Полный ответ определяется методом установленным с помощью `setPkgCheck`
+   * 
+   * 
+   * 
+   * Если ответа не последовало, или ответ не соответсвует 
+   * формату установленному в `setPkgCheck` - будет вызванно исключение.
+   * 
    * Перед отправкой проверяет, что соединение установлено и провайдер не занят.
-   * Подписывается на данные один раз, используя once, и запускает таймер таймаута.
+   * Подписывается на данные используя once, и запускает таймер таймаута.
+   * 
+   * Если метод завершился не выдав исключение - значит ответ на запрос был получен и 
+   * его  можно получить методом `getBuffer`
+   * 
+   * Если вам не важно какие данные вы получаете, а просто хотите получить данные и ответ
+   * рекомендуется установить функцию которая всегда возвращает true в `setPkgCheck`
+   * 
+   * @example 
+   * 
+   * 
+   * setPkgCheck((data)=>{ return true })
+   * this.provider.request(buff, 1000)
+   * console.log(this.provider.getBuffer())
+   * 
+   * @see setPkgCheck()
    * 
    * @param buffer — данные для отправки
    * @param timeout — таймаут запроса в миллисекундах
    * @returns Promise<boolean> — разрешается при получении полного пакета
    */
   public request(buffer: Buffer, timeout: number): Promise<boolean> {
-    if (this.state.progress) throw new Error('Provider is busy');
-    if (!this.state.connected) throw new Error('Provider not connected');
+    if (this.state.progress) throw ErrorManager.make('V2NET_PROVIDER_BUSY');
+    if (!this.state.connected) throw ErrorManager.make('V2NET_PROVIDER_NOT_CONN');
 
     this.state.progress = true;
     this.buffer = Buffer.from('');
@@ -239,7 +330,7 @@ class TCPProvider {
         }
         this.state.progress = false;
         this.state.errors++;
-        reject(new Error('Request timeout'));
+        reject(ErrorManager.make('V2NET_PROVIDER_REQ_TIMEOUT'));
       }, timeout);
 
       if (this.socket) {
@@ -248,7 +339,7 @@ class TCPProvider {
         this.state.byteSend += buffer.length;
         this.socket.once('data', this.handleData.bind(this));
       } else {
-        reject(new Error('Socket not available'));
+        reject(ErrorManager.make('V2NET_PROVIDER_SOCKET_ERROR'));
       }
     });
   }
@@ -272,7 +363,7 @@ class TCPProvider {
     }
 
     if (this.reject) {
-      this.reject(new Error('Provider destroyed'));
+      this.reject(ErrorManager.make('V2NET_PROVIDER_DESTROYED'));
       this.reject = null;
       this.resolve = null;
     }
@@ -309,7 +400,6 @@ class TCPProvider {
     this.state.timeout = false;
     this.state.connection = false;
     this.state.connected = true;
-    this.metricCallback('connected', 1);
     this.readyCallback();
   }
 
@@ -321,7 +411,7 @@ class TCPProvider {
   private handleTimeout(): void {
     this.state.timeout = true;
     if (this.socket) {
-      this.socket.destroy(new Error('Socket connection timeout'));
+      this.socket.destroy(ErrorManager.make('V2NET_PROVIDER_SOCKET_TIMEOUT'));
     }
     setTimeout(() => {
       this.createSocket();
@@ -338,7 +428,6 @@ class TCPProvider {
     this.destroyCallback();
     this.state.connected = false;
     this.state.connection = false;
-    this.metricCallback('connected', 0);
 
     if (!this.state.timeout && this.socket) {
       setTimeout(() => { this.socket.connect(this.options); }, 3000);

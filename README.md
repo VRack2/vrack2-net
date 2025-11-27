@@ -4,7 +4,7 @@
 
 На данном этапе работает и протестированно только:
  
- - **ConverterClient** - Для работы с устройствами работающие на преобразователях типа Ethernet <-> (serial,RS485,CAN).
+ - **ConverterBus** - Для работы с устройствами работающие на преобразователях типа Ethernet <-> (serial,RS485,CAN).
 
 ## Установка
 
@@ -17,7 +17,7 @@ git clone https://github.com/VRack2/vrack2-net.git
 
 ## Использование
 
- - [ConverterClient](./docs/ConverterClient.md) - Для работы через преобразователи типа Ethernet <-> (serial,RS485,CAN).
+ - [ConverterBus](./docs/ConverterBus.md) - Для работы через преобразователи типа Ethernet <-> (serial,RS485,CAN).
 
 ### Дополнительно 
 

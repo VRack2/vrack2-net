@@ -1,6 +1,6 @@
 {
   "name": "vrack2-net",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Устройства VRack2 для работы с TCP сервисами",
   "main": "index.js",
   "scripts": {
