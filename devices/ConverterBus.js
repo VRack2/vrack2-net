@@ -83,6 +83,8 @@ class ConverterClient extends vrack2_core_1.Device {
                 .description('Таймаут соединения (мс)'),
             debug: vrack2_core_1.Rule.boolean().default(false)
                 .description('Включение режима отладки по умолчанию'),
+            internalTimer: vrack2_core_1.Rule.number().integer().min(1).max(10000).default(1)
+                .description('Внутренний интервал между опросами портов в мс (Может быть полезно для симуляции долгих опросов)'),
             registerMetrics: vrack2_core_1.Rule.boolean().default(true).description('Регистрировать ли метрики? Можно не регистрировать для экономии памяти'),
             countOfFails: vrack2_core_1.Rule.number().default(3).description('Сколько неудачных попыток считается что устройство offline'),
             deviceOfflineAlert: vrack2_core_1.Rule.boolean().default(true).description('Создавать алерт если устройство на сети ушло в offline'),
@@ -211,7 +213,7 @@ class ConverterClient extends vrack2_core_1.Device {
                 yield this.queueTick(queue);
             else
                 yield this.standartTick();
-            setTimeout(this.nextGate.bind(this), 1);
+            setTimeout(this.nextGate.bind(this), this.options.internalTimer);
         });
     }
     /**

@@ -56,7 +56,10 @@ class ConverterClient extends Device {
 
       debug: Rule.boolean().default(false)
         .description('Включение режима отладки по умолчанию'),
-      
+
+      internalTimer: Rule.number().integer().min(1).max(10000).default(1)
+        .description('Внутренний интервал между опросами портов в мс (Может быть полезно для симуляции долгих опросов)'),
+
       registerMetrics: Rule.boolean().default(true).description('Регистрировать ли метрики? Можно не регистрировать для экономии памяти'),
       countOfFails: Rule.number().default(3).description('Сколько неудачных попыток считается что устройство offline'),
       deviceOfflineAlert: Rule.boolean().default(true).description('Создавать алерт если устройство на сети ушло в offline'),
@@ -216,7 +219,7 @@ class ConverterClient extends Device {
     else 
       await this.standartTick()
 
-    setTimeout(this.nextGate.bind(this), 1)
+    setTimeout(this.nextGate.bind(this), this.options.internalTimer)
   }
   
   /**
