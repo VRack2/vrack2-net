@@ -1,3 +1,5 @@
 {
-    "ConverterBus": "devices/ConverterBus"
+    "ConverterBus": "devices/ConverterBus",
+    "TCPObjectTransmitter": "devices/TCPObjectTransmitter",
+    "TCPObjectReceiver": "devices/TCPObjectReceiver"
 }

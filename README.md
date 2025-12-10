@@ -15,10 +15,17 @@ cd /opt/vrack2-service/devices/
 git clone https://github.com/VRack2/vrack2-net.git
 ```
 
+Устанавливаем зависимости: 
+
+```
+npm install
+```
+
 ## Использование
 
  - [ConverterBus](./docs/ConverterBus.md) - Для работы через преобразователи типа Ethernet <-> (serial,RS485,CAN).
-
+ - [TCPObjectTransmitter](./docs/TCPObjectTransmitter.md) - Устройство для надёжной отправки объектов на удалённый `TCPObjectReceiver` через WebSocket-соединение.
+ - [TCPObjectReceiver](./docs/TCPObjectReceiver.md) - Устройство  WebSocket-сервер для приёма объектов от внешних клиентов (например, `TCPObjectTransmitter`)
 ### Дополнительно 
 
  - [vrack2-modbus](https://github.com/VRack2/vrack2-modbus) - Упращенная работа с устройстами по протоколу Modbus.
