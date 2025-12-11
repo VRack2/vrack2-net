@@ -70,14 +70,17 @@ class ObjectSender extends vrack2_core_1.Device {
     }
     createClient() {
         const url = `ws://${this.options.host}:${this.options.port}/`;
+        this.terminal('Try connection', { url });
         this._ws = new ws_1.default(url);
         this._ws.on('error', (error) => {
             this.error('WebSocket Error', error);
         });
         this._ws.on('open', () => {
+            this.terminal('opened', this.shares);
             this.shares.online = true;
             if (this._buffer.size)
                 this.sendTimer();
+            this.render();
         });
         this._ws.on('message', (data) => {
             let remoteData;
@@ -106,6 +109,7 @@ class ObjectSender extends vrack2_core_1.Device {
             this._queueTimeout.delete(pkgIndex);
         });
         this._ws.on('close', () => {
+            this.terminal('closed', this.shares);
             this.shares.online = false;
             this.render();
             setTimeout(() => {

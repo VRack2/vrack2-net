@@ -60,6 +60,7 @@ class ObjectSender extends Device {
 
   private createClient(): void {
     const url = `ws://${this.options.host}:${this.options.port}/`;
+    this.terminal('Try connection', { url })
     this._ws = new WebSocket(url);
 
     this._ws.on('error', (error: Error) => {
@@ -67,8 +68,10 @@ class ObjectSender extends Device {
     });
 
     this._ws.on('open', () => {
+      this.terminal('opened', this.shares)
       this.shares.online = true;
       if (this._buffer.size) this.sendTimer();
+      this.render()
     });
 
     this._ws.on('message', (data: WebSocket.RawData) => {
@@ -100,6 +103,7 @@ class ObjectSender extends Device {
     });
 
     this._ws.on('close', () => {
+      this.terminal('closed', this.shares)
       this.shares.online = false;
       this.render();
       setTimeout(() => {
