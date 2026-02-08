@@ -1,5 +1,6 @@
 {
     "ConverterBus": "devices/ConverterBus",
+    "HTTPStaticServer": "devices/HTTPStaticServer",
     "TCPObjectTransmitter": "devices/TCPObjectTransmitter",
     "TCPObjectReceiver": "devices/TCPObjectReceiver"
 }
