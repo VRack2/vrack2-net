@@ -257,6 +257,7 @@ class ConverterClient extends Device {
   */
   async portMaintenance(port: string){
     if (this.shares.off[port]) return
+    if (this.shares.deviceList[port] === false) return
     this.beforePush(port)
     try {
       await this.ports.output[port].push(this.Provider)
